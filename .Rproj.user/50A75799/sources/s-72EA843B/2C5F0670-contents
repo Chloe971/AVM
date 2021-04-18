@@ -1,0 +1,66 @@
+---
+title: "TP1 AVM"
+output: html_document
+---
+
+```{r}
+library(readr)
+logdk <- read.table("logtsDK.csv",header = T)
+```
+
+
+1 - ACP par thème
+
+```{r setup, include=FALSE}
+#Thème Taille 
+logdk <- read.table("logtsDK.csv",header = T)
+logbrut <- data.frame(scale(logdk[,3:12])*sqrt(9/10))
+PCA1Logdk <- PCA(logbrut, scale.unit = F)
+fviz_pca_var(PCA1Logdk, col.var = "cos2", gradient.cols = c("red","pink","purple"), repel = T)
+```
+
+Interpreter THÈME TAILLE
+
+```{r cars}
+#Thème Situation
+logSit <- logdk[,22:29]
+library(ade4)
+logSitInd <- acm.disjonctif(logSit)
+logSitAcp <- data.frame(scale(logSitInd[,22:29])*sqrt(26/27))
+PCA2LogSit <- PCA(logSitAcp, scale.unit = F)
+fviz_pca_var(PCA2LogSit, col.var = "cos2", gradient.cols = c("red","pink","purple"), repel = T)
+```
+
+Interpreter THÈME SITUATION
+
+```{r pressure, echo=FALSE}
+#Thème Qualité
+logQual <- logdk[,13:21]
+library(ade4)
+logQualInd <- acm.disjonctif(logQual)
+logQualAcp <- data.frame(scale(logQualInd[,13:21])*sqrt(18/19))
+PCA2LogQual <- PCA(logQualAcp, scale.unit = F)
+fviz_pca_var(PCA2LogQual, col.var = "cos2", gradient.cols = c("red","pink","purple"), repel = T)
+```
+Interpreter THÈME QUALITÉ
+
+Conclusion
+
+
+
+```{r}
+logQUALITATIVE<-logdk[,13:29] 
+LDK = cbind(logbrut,logQUALITATIVE)
+
+LDKpls = plsr(as.matrix(LDK[,1])~as.matrix((LDK[,2:29]), validation = "LOO"))
+```
+
+
+
+
+
+
+
+
+
+

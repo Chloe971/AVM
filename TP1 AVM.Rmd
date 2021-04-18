@@ -1,0 +1,236 @@
+---
+title: "TP1 AVM"
+output:
+  html_document: default
+  word_document: default
+---
+
+
+```{r}
+library(ade4) #Librairie qui permet l'implentation de fonctions statistiques et graphiques
+library(FactoMineR) #Il permet de réaliser des analyses classiques telles que l'analyse en composantes principales (ACP), l'analyse des correspondances (AC), l'analyse des correspondances multiples (ACM) ainsi que des analyses plus avancées.
+library(glmnet) #Permet d'ajuster l'ensemble du chemin de régularisation lasso ou élastique-net pour la régression linéaire
+library(corrplot)#Permet de visualiser une matrice de corrélation par corrélogrammee
+library(pls)
+
+#Importation des données
+library(readr)
+logtsDK <- read.delim("logtsDK.csv")#Pour importer cet ensemble de données
+
+##Transformation des variables qualitatives en indicatrices:
+logtsDK_taille <- logtsDK[,3:12]
+logtsDK_fact <- logtsDK[,13:29]
+logtsDKnomIndic <- acm.disjonctif(logtsDK_fact)
+LDK = cbind(logtsDK_taille,logtsDKnomIndic)
+
+##Regression MCO directement:
+logtsDK_taille<-as.matrix(logtsDK_taille)
+MCO_taille<- lm(logtsDK$Loyer~logtsDK_taille,data= as.data.frame(logtsDK))
+summary(MCO_taille)
+
+
+##ACP par thème:
+#Thème Taille:
+PCA1<-PCA(logtsDK_taille) 
+plot.PCA(PCA1,choix = "var")  
+PCA1$var$cos2
+corrplot(PCA1$var$cos2) 
+##Valeurs propres:
+PCA1$eig
+barplot(PCA1$eig[,2])
+pca1 = prcomp(logtsDK_taille) 
+
+##La croissance des valeurs propres
+
+pca1$rotation ##Les composantes principales
+pca1$sdev ##Les écarts-types "bruts" 
+
+##Régression sur composantes principales
+
+pcr1<- lm(logtsDK$Loyer~PCA1$ind$coord,data= as.data.frame(logtsDK))
+summary(pcr1)
+##On remarque qu'après la régression sur les composantes principales; les plus utiles sont la première, et la dernière. 
+##Régression MCO sur les CP 1 et 5: 
+MCO_taille2<- lm(logtsDK$Loyer~PCA1$ind$coord[,c(1,5)],data= as.data.frame(logtsDK))
+summary(MCO_taille2)
+
+##C'est plus intéressant de faire la régression sur les 2 composantes que sur une seule. Ainsi, y'a pas de confusion 
+##entre les composantes; c'est la vraie-significativité. 
+
+##Thème Qualité:
+logtsDK_qualite <- LDK[,11:33]
+PCA2<- PCA(logtsDK_qualite, scale=TRUE)
+corrplot(PCA2$var$cos2) 
+##Valeurs propres:
+PCA2$eig
+barplot(PCA2$eig[,2])
+##Régression sur composantes principales
+pcr2<- lm(logtsDK$Loyer~PCA2$ind$coord,data= as.data.frame(logtsDK))
+summary(pcr2)
+##MCO sur la première composante:
+MCO_qualite<- lm(logtsDK$Loyer~PCA2$ind$coord[,1],data= as.data.frame(logtsDK))
+summary(MCO_qualite)
+
+##Thème Situation: 
+logtsDK_situation<- LDK[,34:50]
+PCA3<- PCA(logtsDK_situation)
+corrplot(PCA3$var$cos2)
+
+##Valeurs propres:
+PCA3$eig
+barplot(PCA3$eig[,2])
+
+##Régression sur composantes principales
+pcr3<- lm(logtsDK$Loyer~PCA3$ind$coord,data= as.data.frame(logtsDK))
+summary(pcr3)
+##MCO sur les composantes principales 1 et 3:
+MCO_surface<- lm(logtsDK$Loyer~PCA3$ind$coord[,c(1,3)],data= as.data.frame(logtsDK))
+summary(MCO_surface) 
+
+#Simultanémenet:
+PCAT<- PCA(LDK)
+pcrT<- lm(logtsDK$Loyer~PCAT$ind$coord,data= as.data.frame(logtsDK))
+summary(pcrT)
+
+##Modélisation du loyer sur les thèmes simultanément:
+MCO_T<- lm(logtsDK$Loyer~PCAT$ind$coord[,c(1,2,5)],data= as.data.frame(logtsDK))
+summary(MCO_T)
+
+#Coefficients des variables reconstitués selon la RCP :
+
+
+##Classification sur variables:
+library(ClustOfVar)
+LDK = cbind(logtsDK_taille,logtsDKnomIndic)
+LDK_cr<- scale(LDK)*sqrt(81/82) ##Standardiser les variables
+##On procéde par une classifiction hiérarchique sur les variables avec l'indice WARD:
+dv<- dist(LDK_cr,method="euclidean")
+CAH<- hclust(d=dv,method="ward.D")
+
+##Dendrogramme
+plot(CAH)
+
+##Coupure de l'arbre pour k=2classes: 
+PV2<-cutree(tree = CAH,k=2) 
+
+##Calcul du R^2 des variables avec la variable de classe; On stocke tous les R^2 dans un seul vecteur: 
+R2_PV2= cbind(rep(0,ncol(LDK_cr)))
+for (i in cbind(1:ncol(LDK_cr))) {R2_PV2[i] = summary(lm(LDK_cr[,i]~as.factor(PV2)))$r.squared}
+
+##Calcul du R^2 de la partition: 
+R2P_PV2<- mean(R2_PV2)
+## ON lance une boucle pour calculer R2 de la partiton pour k appartient à {3,4,..,8}
+V <- rep(0,8)
+for(i in 1:8) {
+  PV<-cutree(tree = CAH,k=(i+1)) 
+  R2_PV = cbind(rep(0,ncol(LDK_cr)))
+  for ( j in cbind(1:ncol(LDK_cr))) {R2_PV[j] =
+    summary(lm(LDK_cr[,j]~as.factor(PV)))$r.squared
+  V[i]<- mean(R2_PV)}
+}
+V
+##Le vecteur V représenté ci-dessus contient les R^2 de chaque partition 
+##D'après le vecteur V qui contient les R^2 de chaque partition; on peut choisir 7 partitions.
+##En effet, l'amélioration de l'agrégation de 6 à 7 classes est plus intéressante que l'agrégation de 7 à 8 classes.
+
+##saut d'inertie:
+inertie <- sort(CAH$height, decreasing = TRUE)
+plot(inertie[1:20], type = "s", xlab = "Nombre de classes", ylab = "Inertie")
+
+plot(inertie[1:20], type = "s", xlab = "Nombre de classes", ylab = "Inertie")
+points(c(2, 4), inertie[c(2,4)], col = c("green3", "red3"), cex = 2, lwd = 3)
+
+##Description de la partition en 4 classes:
+P4 <- cutree(tree = CAH,k=4)
+
+summary(P4)
+
+
+#Régression PLS:
+
+
+LDKpls<-plsr(as.matrix(logtsDK[,2])~as.matrix(LDK),validation="LOO")
+LDKpls$validation$PRESS
+barplot(LDKpls$validation$PRESS)
+plot(LDKpls)
+##Selon les composantes retenues:
+LDKpls1 <- plsr(as.matrix(logtsDK[,2]) ~as.matrix(LDK), ncomp=1)
+cor(logtsDK[,2],LDKpls1$fitted.values[,1,1])
+cor(logtsDK[,2],LDKpls1$fitted.values[,1,1])^2
+plot(LDKpls1)
+##On passe au log de la variable y à prédire (ici c'est le loyer): 
+LDKLogYpls <- plsr(as.matrix(log(logtsDK[,2]))~ as.matrix(LDK),validation = "LOO")
+plot(LDKLogYpls)
+LDKLogYpls1 <- plsr(as.matrix(log(logtsDK[,2])) ~as.matrix(LDK),ncomp=1)
+barplot(LDKLogYpls$validation$PRESS)
+plot(RMSEP(LDKLogYpls), legendpos ="topright")
+summary(LDKLogYpls)
+##On fait la prédiction avec 5 composantes: 
+LDKLogYpls5 = plsr(as.matrix(log(logtsDK[,2])) ~as.matrix(LDK),ncomp=5)
+plot(LDKLogYpls5)
+cor(log(logtsDK[,2]),LDKLogYpls5$fitted.values[,1,5])
+cor(log(logtsDK[,2]),LDKLogYpls5$fitted.values[,1,5])^2
+##On trouve R^2=0.975; on régle sur le nombre des composantes.
+plot(LDKLogYpls, ncomp = 5, line = TRUE)
+cor(x=LDK,y=LDKLogYpls5$scores)
+##Interprétation du modèle prédictif fondé sur la première composante :
+regLDKc1 = lm(log(logtsDK[,2]) ~ LDKLogYpls1$scores)
+LogLoyerModelPLS1 = as.matrix(LDKLogYpls1$coefficients[,1,])%*%as.matrix(regLDKc1$coefficients[2])
+
+##Interprétation du modèle prédictif fondé sur les 5 premières composantes :
+regLDKc5 <- lm(log(logtsDK[,2]) ~ LDKLogYpls5$scores)
+LogLoyerModelPLS5 <- as.matrix(LDKLogYpls5$coefficients[,1,])%*%as.matrix(regLDKc5$coefficients[2:6])
+regLDKc5$coefficients[2:6]
+var(LDKLogYpls5$scores)
+
+
+##Régression Ridge:
+
+
+#La fonction qui effectue la régession ridge nous permet de faire des régresions pénalisées, et nous permet de 
+#contôler le coefficient de pénaalité: 
+logLoy <- log(logtsDK[,2])
+fit1 <- glmnet(x=as.matrix(LDK) , y=logLoy, family="gaussian",alpha=0)
+fit1
+##Evolution des coeff quand lambda augmente:
+plot(fit1, xvar='lambda')
+cvfit1<- cv.glmnet(x=as.matrix(LDK), y=logLoy,family="gaussian",alpha=0)##Choix de lambda
+plot(cvfit1) ##Courbe log(lambda) vs MSE
+#valeur min de MSE (en validation croisée)
+print(min(cvfit1$cvm)) 
+##lambda corresp.
+print(cvfit1$lambda.min) 
+##On relance la regression avec le meilleur lambda:
+fit <- glmnet(x=as.matrix(LDK) , y=logLoy, family="gaussian",alpha=0, lambda =9.466981)
+#Coefficients du modèle obtenu:
+coef(fit)
+#lambda le plus élevé dont le MSE est inf.
+#à la borne haute de l’intervalle de min(MSE)
+cvfit1$lambda.1se 
+##ici R^2= 0.81 vs R^2= 0.97  pour PLS sur 5composantes 
+fit1$beta[,100]
+##Comparaison des coefficients de PLS et Ridge:
+fit1$beta[,100]
+
+##LASSO:
+
+
+fit2 <- glmnet(x=as.matrix(LDK) , y=logLoy, family="gaussian",alpha=1 )
+fit2
+plot(fit2, xvar='lambda')
+cvfit2 <- cv.glmnet(x=as.matrix(LDK), y=logLoy, family="gaussian", alpha=1)
+plot(cvfit2) ##Courbe log(lambda) vs MSE
+#valeur min de MSE (en validation croisée)
+min(cvfit2$cvm)
+##lambda corresp.
+min(cvfit2$lambda)
+##On relance la regression avec le meilleur lambda:
+fit_new <- glmnet(x=as.matrix(LDK) , y=logLoy, family="gaussian",alpha=1, lambda =0.00947)
+#Coefficients du modèle obtenu:
+coef(fit_new)
+##On trouve un R^2 de 0.99 ( vs  R^2= 0.81 pour Ridge et vs R^2= 0.97  pour PLS sur 5composantes)
+fit2$beta[,100]
+```
+
+
+

@@ -1,0 +1,6 @@
+"0","#Thème Situation"
+"0","logSit <- logdk[,22:29]"
+"0","library(ade4)"
+"0","logSitInd <- acm.disjonctif(logSit)"
+"0","logSitAcp <- data.frame(scale(logSitInd[,22:29])*sqrt(26/27))"
+"0","PCA2LogSit <- PCA(logSitAcp, scale.unit = F)"

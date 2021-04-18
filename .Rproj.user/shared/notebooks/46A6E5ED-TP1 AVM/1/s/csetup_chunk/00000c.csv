@@ -1,0 +1,4 @@
+"0","#Thème Taille "
+"0","logdk <- read.table(""logtsDK.csv"",header = T)"
+"0","logbrut <- data.frame(scale(logdk[,3:12])*sqrt(9/10))"
+"0","PCA1Logdk <- PCA(logbrut, scale.unit = F)"

@@ -1,0 +1,19 @@
+---
+title: "cvjd"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+library(ade4) #Librairie qui permet l'implentation de fonctions statistiques et graphiques
+library(FactoMineR) #Il permet de réaliser des analyses classiques telles que l'analyse en composantes principales (ACP), l'analyse des correspondances (AC), l'analyse des correspondances multiples (ACM) ainsi que des analyses plus avancées.
+library(glmnet) #Permet d'ajuster l'ensemble du chemin de régularisation lasso ou élastique-net pour la régression linéaire
+library(corrplot)#Permet de visualiser une matrice de corrélation par corrélogrammee
+library(pls)
+
+#Importation des données
+library(readr)
+logtsDK <- read.delim("logtsDK.csv")#Pour importer cet ensemble de données
+```
+

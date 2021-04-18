@@ -1,0 +1,7 @@
+"0","logQUALITATIVE<-logdk[,13:29] "
+"0","LDK = cbind(logbrut,logQUALITATIVE)"
+"0",""
+"0","LDKpls = plsr(as.matrix(LDK[,1])~as.matrix((LDK[,2:29]), validation = ""LOO""))"
+"2","Error in h(simpleError(msg, call)) : 
+  erreur d'évaluation de l'argument 'x' lors de la sélection d'une méthode pour la fonction 'as.matrix' : undefined columns selected
+"

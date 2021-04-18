@@ -1,0 +1,6 @@
+"0","#Thème Qualité"
+"0","logQual <- logdk[,13:21]"
+"0","library(ade4)"
+"0","logQualInd <- acm.disjonctif(logQual)"
+"0","logQualAcp <- data.frame(scale(logQualInd[,13:21])*sqrt(18/19))"
+"0","PCA2LogQual <- PCA(logQualAcp, scale.unit = F)"
